@@ -1,1 +1,57 @@
+from pathlib import Path
+from collections import defaultdict
+from PIL import Image
+from tqdm import tqdm
 
+
+# 直接在这里改路径
+ORIG_LABEL_DIR = Path("./val/label")              # 裁剪前的 labels 文件夹
+PRED_LABEL_DIR = Path("./val_sliced_pred/label")  # 推理得到的切片 labels 文件夹
+OUT_LABEL_DIR = Path("./val_merged_pred/label")   # 拼接后的 labels 输出文件夹
+
+SUFFIX = "png"
+
+
+def merge_labels():
+    OUT_LABEL_DIR.mkdir(parents=True, exist_ok=True)
+
+    groups = defaultdict(list)
+
+    # 文件名格式：原图名_x_y.png
+    for patch_path in PRED_LABEL_DIR.glob(f"*.{SUFFIX}"):
+        name, x, y = patch_path.stem.rsplit("_", 2)
+        groups[name].append((patch_path, int(x), int(y)))
+
+    for name, patches in tqdm(groups.items(), desc="merge labels"):
+        orig_path = ORIG_LABEL_DIR / f"{name}.{SUFFIX}"
+
+        with Image.open(orig_path) as orig_img:
+            orig_w, orig_h = orig_img.size
+
+        max_w = 0
+        max_h = 0
+        for patch_path, x, y in patches:
+            with Image.open(patch_path) as patch:
+                pw, ph = patch.size
+            max_w = max(max_w, x + pw)
+            max_h = max(max_h, y + ph)
+
+        with Image.open(patches[0][0]) as first_patch:
+            merged = Image.new(first_patch.mode, (max_w, max_h))
+
+            if first_patch.mode == "P" and first_patch.getpalette():
+                merged.putpalette(first_patch.getpalette())
+
+        for patch_path, x, y in patches:
+            with Image.open(patch_path) as patch:
+                merged.paste(patch, (x, y))
+
+        # 裁回原始 label 尺寸
+        merged = merged.crop((0, 0, orig_w, orig_h))
+
+        save_path = OUT_LABEL_DIR / f"{name}.{SUFFIX}"
+        merged.save(save_path)
+
+
+if __name__ == "__main__":
+    merge_labels()
