@@ -1,33 +1,20 @@
-Traceback (most recent call last):
-  File "/mnt/ht2-nas2/EO_test/wj1/mm_series/mmseg_olmoearth_new/projects/olmoearth/../../tools/test.py", line 123, in <module>
-    main()
-  File "/mnt/ht2-nas2/EO_test/wj1/mm_series/mmseg_olmoearth_new/projects/olmoearth/../../tools/test.py", line 119, in main
-    runner.test()
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/runner/runner.py", line 1816, in test
-    self._test_loop = self.build_test_loop(self._test_loop)  # type: ignore
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/runner/runner.py", line 1604, in build_test_loop
-    loop = LOOPS.build(
-           ^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/registry/registry.py", line 570, in build
-    return self.build_func(cfg, *args, **kwargs, registry=self)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/registry/build_functions.py", line 121, in build_from_cfg
-    obj = obj_cls(**args)  # type: ignore
-          ^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/runner/loops.py", line 437, in __init__
-    self.evaluator = runner.build_evaluator(evaluator)  # type: ignore
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/runner/runner.py", line 1318, in build_evaluator
-    return Evaluator(evaluator)  # type: ignore
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/evaluator/evaluator.py", line 25, in __init__
-    self.metrics.append(METRICS.build(metric))
-                        ^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/registry/registry.py", line 570, in build
-    return self.build_func(cfg, *args, **kwargs, registry=self)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/ht2-nas2/EO_test/miniconda3/envs/abc/lib/python3.12/site-packages/mmengine/registry/build_functions.py", line 121, in build_from_cfg
-    obj = obj_cls(**args)  # type: ignore
-          ^^^^^^^^^^^^^^^
-TypeError: OlmoEarthIoUMetric.__init__() got an unexpected keyword argument 'output_dir'
+from pathlib import Path
+from PIL import Image
+from tqdm import tqdm
+
+src_dir = Path("input_images")
+dst_dir = Path("output_images")
+dst_dir.mkdir(parents=True, exist_ok=True)
+
+exts = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+img_paths = [p for p in src_dir.rglob("*") if p.suffix.lower() in exts]
+
+for p in tqdm(img_paths, desc="Upscaling images"):
+    with Image.open(p) as img:
+        w, h = img.size
+        out = img.resize((w * 4, h * 4), Image.Resampling.NEAREST)
+
+        save_path = dst_dir / p.relative_to(src_dir)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        out.save(save_path)
